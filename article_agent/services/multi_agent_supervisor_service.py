@@ -3,6 +3,10 @@ from langgraph_supervisor import create_supervisor
 from langgraph.prebuilt import create_react_agent
 from dotenv import load_dotenv
 import os
+import uuid
+
+from langgraph.checkpoint.memory import InMemorySaver
+from langgraph.store.memory import InMemoryStore
 
 load_dotenv()
 
@@ -10,6 +14,8 @@ class MultiAgentSupervisor:
     def __init__(self):
         self.openai_api_key = os.getenv("OPENAI_API_KEY")
         self.model = ChatOpenAI(model="gpt-4o-mini", temperature=0, api_key=self.openai_api_key)
+        self.checkpointer = InMemorySaver()
+        self.store = InMemoryStore()
 
     def add(self, a: float, b: float) -> float:
         """
@@ -69,14 +75,19 @@ class MultiAgentSupervisor:
                 )
             )
 
-        app = workflow.compile()
+        app = workflow.compile(
+            checkpointer=self.checkpointer,
+            store=self.store
+        )
         results = app.invoke({
             "messages": [
                 {"role": "user",
-                "content": "what's the combined headcount of the FAANG companies in 2024?"
+                "content": "what is 234 times 568?"
                 }
             ]
-        })
+        },
+        config={"thread_id": str(uuid.uuid4())}
+        )
         return results
         
     
